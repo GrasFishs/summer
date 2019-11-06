@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Req,
-  Query,
-  Post,
-  Body
-} from '../../lib/decorator/Controller';
-import { AutoWired, Value } from '../../lib/decorator/Bean';
+import { Controller, Get, Param, Post, Body, AutoWired } from '../../lib';
 import UserService from '../service/UserService';
 
 @Controller('/user')

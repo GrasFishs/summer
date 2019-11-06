@@ -1,4 +1,6 @@
 import { Router, Response, Request } from 'express';
+import { IMiddleware, MiddlewareCallback } from './Middleware';
+import { getDecoratorType } from '../utils/decorator';
 
 type Route = {
   method: string;
@@ -17,16 +19,26 @@ type Params = {
   [method: string]: Param[];
 };
 
+type MiddlewareModel = {
+  type: 'class' | 'method' | 'param';
+  name: string;
+  middleware: MiddlewareCallback;
+};
+
 class ControllerModel {
   static _type = 'Controller';
 
-  public _routes: Route[] = [];
+  public _routes: Route[];
 
-  public _params: Params = {};
+  public _params: Params;
+
+  public _middleware: MiddlewareModel[];
 
   public _path: string;
 
   public _router: Router;
+
+  public addRoutes: () => void;
 }
 
 export default class ControllerHandler {
@@ -50,13 +62,37 @@ export default class ControllerHandler {
 
   private static setController(target: ControllerModel, path: string) {
     this.target = target;
-    this.target._path = path;
-    this.target._router = Router();
-    if (this.target._routes) {
-      this.target._routes.forEach(route => {
-        this.setRoute(route);
-      });
-    }
+    target._path = path;
+    target._router = Router();
+    target.addRoutes = () => {
+      if (target._routes) {
+        target._routes.forEach(route => {
+          this.setRoute(route);
+        });
+      }
+    };
+  }
+
+  public static addMiddleware() {
+    return Middleware => (target, ...args) => {
+      const proto = target.prototype;
+      const type = getDecoratorType(target, args[0], args[1]);
+      if (Middleware && typeof Middleware === 'function') {
+        const middleware = new Middleware();
+        if (middleware.resolve) {
+          const model: MiddlewareModel = {
+            type,
+            name: args[0],
+            middleware: middleware.resolve()
+          };
+          if (proto._middleware) {
+            proto._middleware.push(model);
+          } else {
+            proto._middleware = [model];
+          }
+        }
+      }
+    };
   }
 
   public static addRouteMethod(reqMethod) {
@@ -97,7 +133,15 @@ export default class ControllerHandler {
   }
 
   private static setRoute({ method, path, name, callback }: Route) {
-    this.target._router[method](path, (req: Request, res: Response) => {
+    const mws: MiddlewareCallback[] = [];
+    const middleware = this.target._middleware;
+    if (middleware) {
+      const classMiddleware = middleware.find(m => m.type === 'class');
+      const methodMiddleware = middleware.find(m => m.name === name);
+      if (classMiddleware) mws[0] = classMiddleware.middleware;
+      if (methodMiddleware) mws.push(methodMiddleware.middleware);
+    }
+    this.target._router[method](path, ...mws, (req: Request, res: Response) => {
       const result = callback.apply(this.target, this.getArgs(req, res, name));
       this.handleCallback(res, result);
     });

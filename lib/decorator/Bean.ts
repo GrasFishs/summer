@@ -1,11 +1,10 @@
 import BeanFactory from '../factory/bean';
 export function AutoWired(target, name) {
-  const val = BeanFactory.get(name);
   Object.defineProperty(target, name, {
     enumerable: true,
     configurable: true,
     get() {
-      return val;
+      return BeanFactory.get(name);
     }
   });
 }

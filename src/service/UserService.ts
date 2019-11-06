@@ -1,5 +1,4 @@
-import { Service } from '../../lib/decorator/Controller';
-import { AutoWired } from '../../lib/decorator/Bean';
+import { Service, AutoWired } from '../../lib';
 import UserRepository from '../repository/UserRepository';
 
 @Service

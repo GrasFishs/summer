@@ -1,4 +1,4 @@
-import { Repository } from '../../lib/decorator/Controller';
+import { Repository } from '../../lib';
 
 const users = [
   {

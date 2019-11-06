@@ -1,80 +1,90 @@
 import * as express from 'express';
 import * as bodyParser from 'body-parser';
-import * as fs from 'fs';
-import * as path from 'path';
+import { join } from 'path';
+import { getAllFiles } from '../utils/files';
 import BeanFactory from '../factory/bean';
+import { MiddlewareCallback, IMiddleware } from './Middleware';
 
-let app: express.Express;
+type PackagePath = {
+  configPackage: string;
+  controllerPackage: string;
+  repositoryPackage: string;
+  servicePackage: string;
+};
 
-function getAllFiles(pkg, type, files = [], config = {}) {
-  if (fs.existsSync(pkg)) {
-    fs.readdirSync(pkg).forEach(f => {
-      const p = path.join(pkg, f);
-      if (fs.statSync(p).isDirectory()) {
-        getAllFiles(pkg, type, files);
-      } else {
-        const mod = require(p);
-        if (type === '') {
-          config = {
-            ...config,
-            ...mod
-          };
-        } else if (mod.default._type === type) {
-          const Class = mod.default;
-          const matcher = Class.toString().match(/function (.*?)\(/)[1];
-          const name = matcher[0].toLowerCase() + matcher.slice(1);
-          const instance = new Class();
-          BeanFactory.add(name, instance);
-          files.push({ name, instance });
-        }
-      }
-    });
-  }
-  if (type === '') {
-    BeanFactory.add('config', config);
-  }
-  return files;
-}
+const rootPath = process.cwd();
 
-function addConfiguration(pkg) {
-  getAllFiles(pkg, '');
-}
-
-function addRepository(app, pkg) {
-  getAllFiles(pkg, 'Repository');
-}
-
-function addService(app, pkg) {
-  getAllFiles(pkg, 'Service');
-}
-
-function addControllers(app, pkg) {
-  getAllFiles(pkg, 'Controller').forEach(({ instance }) => {
-    if (instance._router) {
-      app.use(instance._path, instance._router);
-    }
-  });
-}
+const pkgPaths: PackagePath = {
+  configPackage: join(rootPath, 'res'),
+  controllerPackage: join(rootPath, 'src', 'controller'),
+  repositoryPackage: join(rootPath, 'src', 'repository'),
+  servicePackage: join(rootPath, 'src', 'service')
+};
 
 export default class Application {
-  static run(
-    { configPackage, repositoryPackage, servicePackage, controllerPackage } = {
-      controllerPackage: path.join(process.cwd(), 'src', 'controller'),
-      repositoryPackage: path.join(process.cwd(), 'src', 'repository'),
-      servicePackage: path.join(process.cwd(), 'src', 'service'),
-      configPackage: path.join(process.cwd(), 'res')
-    }
+  private app: express.Express;
+  private pkg: PackagePath;
+
+  private init(instance, pkg) {
+    this.app = instance;
+    this.pkg = pkg;
+    this.addConfiguration(pkg.configPackage);
+    this.addRepository(this.pkg.repositoryPackage);
+    this.addService(this.pkg.servicePackage);
+  }
+
+  public static create(
+    instance = express(),
+    {
+      configPackage = pkgPaths.configPackage,
+      controllerPackage = pkgPaths.controllerPackage,
+      repositoryPackage = pkgPaths.repositoryPackage,
+      servicePackage = pkgPaths.servicePackage
+    } = pkgPaths
   ) {
-    app = express();
-    app.use(bodyParser.json());
-    app.use(bodyParser.urlencoded({ extended: false }));
-    BeanFactory.add('app', app);
-    addConfiguration(configPackage);
-    addRepository(app, repositoryPackage);
-    addService(app, servicePackage);
-    addControllers(app, controllerPackage);
-    return new Promise(resolve => {
-      app.listen(BeanFactory.get('config').port, resolve);
+    const pkg = {
+      configPackage,
+      controllerPackage,
+      repositoryPackage,
+      servicePackage
+    };
+    const app = new Application();
+    app.init(instance, pkg);
+    return app;
+  }
+
+  public listen(port, cb) {
+    BeanFactory.add('app', this.app);
+    this.addControllers(this.pkg.controllerPackage);
+    this.app.listen(port, cb);
+  }
+
+  public use(cb: MiddlewareCallback | IMiddleware) {
+    if (typeof cb === 'function') {
+      this.app.use(cb);
+    } else {
+      this.app.use(cb.resolve());
+    }
+  }
+
+  private addConfiguration(pkg) {
+    getAllFiles(pkg, 'Configuration');
+  }
+
+  private addService(pkg) {
+    getAllFiles(pkg, 'Service');
+  }
+
+  private addRepository(pkg) {
+    getAllFiles(pkg, 'Repository');
+  }
+
+  private addControllers(pkg) {
+    getAllFiles(pkg, 'Controller').forEach(({ instance }) => {
+      if (instance._router) {
+        instance.addRoutes();
+        this.app.use(instance._path, instance._router);
+      }
     });
   }
 }
