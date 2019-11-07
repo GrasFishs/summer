@@ -144,18 +144,30 @@ export default class ControllerHandler {
       if (classMiddleware) mws[0] = classMiddleware.middleware;
       if (methodMiddleware) mws.push(methodMiddleware.middleware);
     }
-    this.target._router[method](path, ...mws, (req: Request, res: Response, next: NextFunction) => {
-      const result = callback.apply(this.target, this.getArgs(req, res, next, name));
-      this.handleCallback(res, result);
-    });
+    this.target._router[method](
+      path,
+      ...mws,
+      (req: Request, res: Response, next: NextFunction) => {
+        const result = callback.apply(
+          this.target,
+          this.getArgs(req, res, next, name)
+        );
+        this.handleCallback(res, result);
+      }
+    );
   }
 
-  private static getArgs(req: Request, res: Response, next: NextFunction, methodName: string) {
+  private static getArgs(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+    methodName: string
+  ) {
     const mapper = {
       req,
       res,
       next
-    }
+    };
     const args: any[] = [req, res, next];
     if ('_params' in this.target) {
       const params = this.target._params[methodName];
@@ -175,7 +187,7 @@ export default class ControllerHandler {
   private static handleCallback(res: Response, result: any) {
     if (result !== undefined) {
       if (result instanceof Promise) {
-        result.then(res.json);
+        result.then(data => res.json(data));
       } else {
         res.json(result);
       }
