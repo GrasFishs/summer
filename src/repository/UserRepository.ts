@@ -1,4 +1,4 @@
-import { Repository } from '../../lib';
+import { Repository } from 'summer';
 
 const users = [
   {

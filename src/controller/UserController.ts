@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Body, AutoWired } from '../../lib';
+import { Controller, Get, Param, Post, Body, AutoWired, } from 'summer';
 import UserService from '../service/UserService';
 
 @Controller('/user')

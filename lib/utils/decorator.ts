@@ -9,3 +9,7 @@ export function getDecoratorType(target, _, desc) {
     }
   }
 }
+
+export function getClassName(Class): string {
+  return Class.toString().match(/class (.*?)\s?{/)[1]
+}

@@ -13,5 +13,7 @@ export const Delete = Handler.addRouteMethod('delete');
 export const Param = Handler.addArgument('params');
 export const Body = Handler.addArgument('body');
 export const Query = Handler.addArgument('query');
+export const Header = Handler.addArgument('headers');
 export const Res = Handler.addArgument('res');
 export const Req = Handler.addArgument('req');
+export const Next = Handler.addArgument('next');

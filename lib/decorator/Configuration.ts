@@ -1,4 +1,4 @@
-import BeanFactory from '../factory/bean';
+import { BeanFactory } from '../core/Application';
 
 const TYPE = 'Configuration';
 

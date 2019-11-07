@@ -1,5 +1,4 @@
-import Application from '../lib/core/Application';
-import BeanFactory from '../lib/factory/bean';
+import { Application, BeanFactory } from 'summer';
 import { LogMiddleware } from './middleware/LogMiddleware';
 
 const app = Application.create();

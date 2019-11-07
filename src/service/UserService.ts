@@ -1,4 +1,4 @@
-import { Service, AutoWired } from '../../lib';
+import { Service, AutoWired } from 'summer';
 import UserRepository from '../repository/UserRepository';
 
 @Service

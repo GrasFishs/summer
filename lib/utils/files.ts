@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import BeanFactory from '../factory/bean';
+import { BeanFactory } from '../core/Application';
+import { getClassName } from './decorator';
 
 export function getAllFiles(pkg, type, files = [], config = {}) {
   if (fs.existsSync(pkg)) {
@@ -15,9 +16,10 @@ export function getAllFiles(pkg, type, files = [], config = {}) {
             ...config,
             ...mod
           };
+          files.push({ instance: mod })
         } else if (mod.default._type === type) {
           const Class = mod.default;
-          const matcher = Class.toString().match(/class (.*?)\s?{/)[1];
+          const matcher = getClassName(Class);
           const name = matcher[0].toLowerCase() + matcher.slice(1);
           const instance = new Class();
           BeanFactory.add(name, instance);

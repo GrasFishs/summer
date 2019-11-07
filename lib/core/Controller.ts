@@ -1,6 +1,7 @@
-import { Router, Response, Request } from 'express';
-import { IMiddleware, MiddlewareCallback } from './Middleware';
-import { getDecoratorType } from '../utils/decorator';
+import { Router, Response, Request, NextFunction } from 'express';
+import { MiddlewareCallback } from './Middleware';
+import { getDecoratorType, getClassName } from '../utils/decorator';
+import { BeanFactory } from './Application';
 
 type Route = {
   method: string;
@@ -74,15 +75,15 @@ export default class ControllerHandler {
   }
 
   public static addMiddleware() {
-    return Middleware => (target, ...args) => {
+    return (Middleware?: any) => (target, name?, descriptor?) => {
       const proto = target.prototype;
-      const type = getDecoratorType(target, args[0], args[1]);
+      const type = getDecoratorType(target, name, descriptor);
       if (Middleware && typeof Middleware === 'function') {
-        const middleware = new Middleware();
+        const middleware = BeanFactory.get(getClassName(Middleware));
         if (middleware.resolve) {
           const model: MiddlewareModel = {
             type,
-            name: args[0],
+            name: name,
             middleware: middleware.resolve()
           };
           if (proto._middleware) {
@@ -91,6 +92,8 @@ export default class ControllerHandler {
             proto._middleware = [model];
           }
         }
+      } else {
+        BeanFactory.add(getClassName(target), new target());
       }
     };
   }
@@ -141,22 +144,27 @@ export default class ControllerHandler {
       if (classMiddleware) mws[0] = classMiddleware.middleware;
       if (methodMiddleware) mws.push(methodMiddleware.middleware);
     }
-    this.target._router[method](path, ...mws, (req: Request, res: Response) => {
-      const result = callback.apply(this.target, this.getArgs(req, res, name));
+    this.target._router[method](path, ...mws, (req: Request, res: Response, next: NextFunction) => {
+      const result = callback.apply(this.target, this.getArgs(req, res, next, name));
       this.handleCallback(res, result);
     });
   }
 
-  private static getArgs(req: Request, res: Response, methodName: string) {
-    const args: any[] = [req, res];
+  private static getArgs(req: Request, res: Response, next: NextFunction, methodName: string) {
+    const mapper = {
+      req,
+      res,
+      next
+    }
+    const args: any[] = [req, res, next];
     if ('_params' in this.target) {
       const params = this.target._params[methodName];
       if (params) {
         params.forEach(({ type, index, arg }) => {
-          if (type !== 'req' && type !== 'res') {
+          if (!(type in mapper)) {
             args[index] = arg ? req[type][arg] : req[type];
           } else {
-            args[index] = type === 'req' ? req : res;
+            args[index] = mapper[type];
           }
         });
       }

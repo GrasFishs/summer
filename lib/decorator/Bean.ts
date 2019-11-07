@@ -1,4 +1,4 @@
-import BeanFactory from '../factory/bean';
+import { BeanFactory } from '../core/Application';
 export function AutoWired(target, name) {
   Object.defineProperty(target, name, {
     enumerable: true,
@@ -10,7 +10,7 @@ export function AutoWired(target, name) {
 }
 
 export function Value(field, defaultValue = '') {
-  return function(target, name) {
+  return function (target, name) {
     const config = BeanFactory.get('config');
     Object.defineProperty(target, name, {
       enumerable: true,

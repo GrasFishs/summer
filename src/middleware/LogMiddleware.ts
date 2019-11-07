@@ -1,5 +1,6 @@
-import { IMiddleware, MiddlewareCallback } from '../../lib/core/Middleware';
+import { IMiddleware, MiddlewareCallback, Middleware } from 'summer';
 
+@Middleware()
 export class LogMiddleware implements IMiddleware {
   resolve(): MiddlewareCallback {
     return (req, res, next) => {
