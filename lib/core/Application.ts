@@ -3,6 +3,7 @@ import * as bodyParser from 'body-parser';
 import { join } from 'path';
 import { getAllFiles } from '../utils/files';
 import { MiddlewareCallback, IMiddleware } from './Middleware';
+import { ConfigurationHandler } from './Configuration';
 
 type PackagePath = {
   configPackage: string;
@@ -35,7 +36,6 @@ export class BeanFactory {
     this.beans.set(name, bean);
   }
 }
-
 
 export class Application {
   private app: express.Express;
@@ -88,7 +88,8 @@ export class Application {
   private addConfiguration(pkg) {
     console.log('[开始加载] 配置层');
     const configs = getAllFiles(pkg, 'Configuration');
-    console.log('[加载完毕] 成功加载' + configs.length + '个配置器')
+    const { env } = ConfigurationHandler.parse(configs);
+    console.log('[加载完毕] 成功加载配置层', '当前环境' + (env ? env : '默认'));
   }
 
   private addService(pkg) {
